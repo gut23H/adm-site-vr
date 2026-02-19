@@ -232,18 +232,30 @@ async function carregarTudo(){
   // PEDIDOS
   const pedidosSnap = await getDocs(collection(db,"pedidos_destaque"));
   pedidosSnap.forEach(d=>{
-    const p = d.data();
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = `
-      <h3>⏳ PEDIDO</h3>
-      <b>${p.nome}</b>
-      <p>${p.tipo}</p>
-      <button onclick="aprovar('${d.id}')">✅ Aprovar</button>
-      <button onclick="rejeitar('${d.id}')">❌ Rejeitar</button>
-    `;
-    cardsContainer.appendChild(div);
-  });
+  const p = d.data();
+  const div = document.createElement("div");
+  div.className = "card";
+  div.innerHTML = `
+    <h3>⏳ PEDIDO DE PLANO</h3>
+    <b>${p.nome}</b>
+    <p><strong>Tipo:</strong> ${p.tipo || "Não informado"}</p>
+    <p><strong>Telefone:</strong> ${p.telefone}</p>
+    <p><strong>Endereço:</strong> ${p.endereco || ""}</p>
+
+    <a class="button" 
+       href="https://wa.me/55${p.telefone}" 
+       target="_blank">
+       📲 Chamar no WhatsApp
+    </a>
+
+    <br><br>
+
+    <button onclick="aprovar('${d.id}')">✅ Aprovar</button>
+    <button onclick="rejeitar('${d.id}')">❌ Rejeitar</button>
+  `;
+  cardsContainer.appendChild(div);
+});
+
 
   const tituloVer = document.createElement("h2");
   tituloVer.innerText = "✅ Empresas Verificadas";
@@ -319,6 +331,3 @@ window.remover = async (id)=>{
 
 </body>
 </html>
-
-
-
