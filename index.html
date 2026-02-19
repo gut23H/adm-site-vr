@@ -154,8 +154,12 @@ button:hover {background:#1b3a4b;}
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+  getFirestore, collection, getDocs, addDoc, deleteDoc, doc 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+  getAuth, signInWithEmailAndPassword 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
  apiKey:"AIzaSyDDykQQH_vhq9lj4dlwPZgtrZQDFr8eVcI",
@@ -173,30 +177,59 @@ const auth = getAuth(app);
 const ADMIN_UID = "KxJVj5QUxAYqrcZ4OcNNnoTVvH62";
 
 const formLogin = document.getElementById("formLogin");
+const formAdmin = document.getElementById("formAdmin");
 const painel = document.getElementById("painel");
 const cardsContainer = document.getElementById("cardsContainer");
 
+// ===== LOGIN =====
 formLogin.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const email = emailLogin.value;
-  const senha = senhaLogin.value;
 
-  const cred = await signInWithEmailAndPassword(auth,email,senha);
+  const cred = await signInWithEmailAndPassword(
+    auth,
+    emailLogin.value,
+    senhaLogin.value
+  );
+
   if(cred.user.uid !== ADMIN_UID){
     alert("Sem permissão de admin!");
     return;
   }
 
-  alert("Login OK!");
   formLogin.style.display="none";
   painel.style.display="block";
   carregarTudo();
 });
 
+// ===== ADICIONAR EMPRESA PELO FORMULÁRIO =====
+formAdmin.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+
+  await addDoc(collection(db,"servicos"),{
+    nome: nome.value,
+    email: email.value,
+    telefone: telefone.value,
+    endereco: endereco.value,
+    horario: horario.value,
+    tipo: tipoInput.value,
+    linkMaps: linkMaps.value,
+    descricao: descricao.value,
+    destaque: true,
+    verificado: true,
+    status: "ativo",
+    dataInicio: new Date().toISOString()
+  });
+
+  alert("Empresa adicionada como VERIFICADA!");
+  formAdmin.reset();
+  carregarTudo();
+});
+
+// ===== CARREGAR =====
 async function carregarTudo(){
   cardsContainer.innerHTML = "";
 
-  // ===== PEDIDOS PENDENTES =====
+  // PEDIDOS
   const pedidosSnap = await getDocs(collection(db,"pedidos_destaque"));
   pedidosSnap.forEach(d=>{
     const p = d.data();
@@ -205,66 +238,47 @@ async function carregarTudo(){
     div.innerHTML = `
       <h3>⏳ PEDIDO</h3>
       <b>${p.nome}</b>
-      <p>Tipo: ${p.tipo}</p>
-      <p>Email: ${p.email}</p>
-      <p>Telefone: ${p.telefone}</p>
-      <p>Endereço: ${p.endereco}</p>
-      <p>${p.descricao}</p>
+      <p>${p.tipo}</p>
       <button onclick="aprovar('${d.id}')">✅ Aprovar</button>
       <button onclick="rejeitar('${d.id}')">❌ Rejeitar</button>
     `;
     cardsContainer.appendChild(div);
   });
 
-  // ===== TÍTULO VERIFICADAS =====
   const tituloVer = document.createElement("h2");
   tituloVer.innerText = "✅ Empresas Verificadas";
-  tituloVer.style.width = "100%";
+  tituloVer.style.width="100%";
   cardsContainer.appendChild(tituloVer);
 
-  // ===== EMPRESAS VERIFICADAS =====
   const servicosSnap = await getDocs(collection(db,"servicos"));
+
   servicosSnap.forEach(d=>{
     const p = d.data();
-
     if(p.verificado === true){
       const div = document.createElement("div");
-      div.className = "card destaque";
-      div.innerHTML = `
-        <h3>✔ VERIFICADO</h3>
+      div.className="card destaque";
+      div.innerHTML=`
         <b>${p.nome}</b>
-        <p>Tipo: ${p.tipo}</p>
-        <p>Email: ${p.email}</p>
-        <p>Telefone: ${p.telefone}</p>
-        <p>Endereço: ${p.endereco}</p>
-        <p>${p.descricao}</p>
+        <p>${p.tipo}</p>
         <button onclick="remover('${d.id}')">🗑 Remover</button>
       `;
       cardsContainer.appendChild(div);
     }
   });
 
-  // ===== TÍTULO NÃO VERIFICADAS =====
   const tituloNao = document.createElement("h2");
-  tituloNao.innerText = "⚠️ Empresas NÃO Verificadas";
-  tituloNao.style.width = "100%";
+  tituloNao.innerText = "⚠ Empresas NÃO Verificadas";
+  tituloNao.style.width="100%";
   cardsContainer.appendChild(tituloNao);
 
-  // ===== EMPRESAS NÃO VERIFICADAS =====
   servicosSnap.forEach(d=>{
     const p = d.data();
-
     if(p.verificado !== true){
       const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
-        <h3>⚠ NÃO VERIFICADO</h3>
+      div.className="card";
+      div.innerHTML=`
         <b>${p.nome}</b>
-        <p>Tipo: ${p.tipo}</p>
-        <p>Email: ${p.email}</p>
-        <p>Telefone: ${p.telefone}</p>
-        <p>Endereço: ${p.endereco}</p>
-        <p>${p.descricao}</p>
+        <p>${p.tipo}</p>
         <button onclick="remover('${d.id}')">🗑 Remover</button>
       `;
       cardsContainer.appendChild(div);
@@ -276,44 +290,35 @@ async function carregarTudo(){
 window.aprovar = async (id)=>{
   const snap = await getDocs(collection(db,"pedidos_destaque"));
   let dados;
-
   snap.forEach(d=>{
-    if(d.id === id){
-      dados = d.data();
-    }
+    if(d.id===id) dados=d.data();
   });
 
   await addDoc(collection(db,"servicos"),{
     ...dados,
-    destaque:true,
     verificado:true,
+    destaque:true,
     status:"ativo",
     dataInicio:new Date().toISOString()
   });
 
   await deleteDoc(doc(db,"pedidos_destaque",id));
-  alert("Pedido aprovado com sucesso!");
   carregarTudo();
-}
+};
 
-// ===== REJEITAR =====
 window.rejeitar = async (id)=>{
-  if(confirm("Deseja rejeitar este pedido?")){
-    await deleteDoc(doc(db,"pedidos_destaque",id));
-    carregarTudo();
-  }
-}
+  await deleteDoc(doc(db,"pedidos_destaque",id));
+  carregarTudo();
+};
 
-// ===== REMOVER =====
 window.remover = async (id)=>{
-  if(confirm("Remover esta empresa?")){
-    await deleteDoc(doc(db,"servicos",id));
-    carregarTudo();
-  }
-}
+  await deleteDoc(doc(db,"servicos",id));
+  carregarTudo();
+};
 </script>
-
 
 </body>
 </html>
+
+
 
