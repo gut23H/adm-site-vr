@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Painel Admin - Plano Destaque</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  font-family: Arial; 
+  margin:0; 
+  padding:20px; 
+  background:#eef2f3;
+}
+
+h1 {text-align:center; color:#2c5364; margin-bottom:20px;}
+
+form {
+  background:#fff; 
+  padding:20px; 
+  border-radius:10px; 
+  max-width:600px; 
+  margin:20px auto; 
+  box-shadow:0 0 10px #ccc;
+}
+
+input, textarea, select, button {
+  width:100%; 
+  padding:10px; 
+  margin-top:8px; 
+  border-radius:5px; 
+  border:1px solid #ccc; 
+  box-sizing:border-box;
+}
+
+button {
+  background:#2c5364; 
+  color:white; 
+  border:none; 
+  cursor:pointer; 
+  transition: 0.3s;
+}
+
+button:hover {background:#1b3a4b;}
+
+.cards-container {
+  display:flex; 
+  flex-wrap:wrap; 
+  gap:15px; 
+  justify-content:center; 
+  margin-top:30px;
+}
+
+.card {
+  background:#fff; 
+  border-radius:15px; 
+  padding:15px; 
+  width:280px; 
+  box-shadow:0 5px 15px rgba(0,0,0,0.1); 
+  position:relative; 
+  transition: transform 0.3s, box-shadow 0.3s, border 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px); 
+  box-shadow:0 10px 20px rgba(0,0,0,0.2);
+}
+
+/* Destaque: borda dourada e animação pulsante */
+.card.destaque {
+  border: 3px solid gold;
+  animation: pulse 2s infinite;
+}
+
+/* Pulsação suave */
+@keyframes pulse {
+  0% { box-shadow: 0 0 10px gold; }
+  50% { box-shadow: 0 0 20px gold; }
+  100% { box-shadow: 0 0 10px gold; }
+}
+
+.card h2 {margin:0; color:#2c5364;}
+.card p {margin:5px 0;}
+.card a.button {
+  display:inline-block; 
+  text-decoration:none; 
+  background:#25d366; 
+  color:white; 
+  padding:8px 12px; 
+  border-radius:8px; 
+  margin-right:5px; 
+  transition:0.3s;
+}
+.card a.button.maps {background:#4285F4;}
+.card a.button:hover {opacity:0.8;}
+
+.status {
+  position:absolute; 
+  top:15px; 
+  right:15px; 
+  padding:5px 10px; 
+  border-radius:5px; 
+  color:white; 
+  font-weight:bold;
+}
+
+.status.ativo {background:green;}
+.status.expirado {background:red;}
+</style>
+</head>
+<body>
+
+<h1>Painel Admin - Plano Destaque</h1>
+
+<!-- Formulário de login -->
+<form id="formLogin">
+<h3>Login Admin</h3>
+<input id="emailLogin" placeholder="Email do admin" type="email" required>
+<input id="senhaLogin" placeholder="Senha" type="password" required>
+<button type="submit">Entrar</button>
+</form>
+
+<!-- Painel só visível após login -->
+<div id="painel" style="display:none;">
+<form id="formAdmin">
+<h3>Adicionar Empresa Plano Destaque</h3>
+<input id="nome" placeholder="Nome da empresa" required>
+<input id="email" placeholder="Email" required>
+<input id="telefone" placeholder="Telefone (DDD + número)" required>
+<input id="endereco" placeholder="Endereço completo" required>
+<input id="horario" placeholder="Horário de funcionamento (Ex: 08:00 às 18:00)" required>
+
+<label for="tipoInput">Tipo de empresa</label>
+<input list="tipos" id="tipoInput" placeholder="Digite ou escolha..." required>
+<datalist id="tipos">
+  <option>Pedreiro</option>
+  <option>Eletricista</option>
+  <option>Diarista</option>
+  <option>Mecânico</option>
+  <option>Cabeleireiro / Barbeiro</option>
+  <option>Encanador</option>
+  <option>Pintor</option>
+  <option>Chaveiro</option>
+  <option>Jardineiro</option>
+  <option>Fotógrafo</option>
+  <option>Outros</option>
+</datalist>
+
+<input id="linkMaps" placeholder="Link do Google Maps (opcional)">
+<textarea id="descricao" placeholder="Descrição detalhada do serviço / empresa"></textarea>
+<button type="submit">Adicionar Plano Destaque</button>
+</form>
+
+<div class="cards-container" id="cardsContainer"></div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const firebaseConfig = {
+ apiKey:"AIzaSyDDykQQH_vhq9lj4dlwPZgtrZQDFr8eVcI",
+ authDomain:"dona-paula-pix.firebaseapp.com",
+ projectId:"dona-paula-pix",
+ storageBucket:"dona-paula-pix.firebasestorage.app",
+ messagingSenderId:"786103759925",
+ appId:"1:786103759925:web:592b34220b9a38753f2d7c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const ADMIN_UID = "KxJVj5QUxAYqrcZ4OcNNnoTVvH62";
+
+const formLogin = document.getElementById("formLogin");
+const painel = document.getElementById("painel");
+const cardsContainer = document.getElementById("cardsContainer");
+
+formLogin.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = emailLogin.value;
+  const senha = senhaLogin.value;
+
+  const cred = await signInWithEmailAndPassword(auth,email,senha);
+  if(cred.user.uid !== ADMIN_UID){
+    alert("Sem permissão de admin!");
+    return;
+  }
+
+  alert("Login OK!");
+  formLogin.style.display="none";
+  painel.style.display="block";
+  carregarTudo();
+});
+
+async function carregarTudo(){
+  cardsContainer.innerHTML = "";
+
+  // ===== PEDIDOS PENDENTES =====
+  const pedidosSnap = await getDocs(collection(db,"pedidos_destaque"));
+  pedidosSnap.forEach(d=>{
+    const p = d.data();
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <h3>⏳ PEDIDO</h3>
+      <b>${p.nome}</b>
+      <p>Tipo: ${p.tipo}</p>
+      <p>Email: ${p.email}</p>
+      <p>Telefone: ${p.telefone}</p>
+      <p>Endereço: ${p.endereco}</p>
+      <p>${p.descricao}</p>
+      <button onclick="aprovar('${d.id}')">✅ Aprovar</button>
+      <button onclick="rejeitar('${d.id}')">❌ Rejeitar</button>
+    `;
+    cardsContainer.appendChild(div);
+  });
+
+  // ===== EMPRESAS JÁ VERIFICADAS =====
+  const servicosSnap = await getDocs(collection(db,"servicos"));
+  servicosSnap.forEach(d=>{
+    const p = d.data();
+    const div = document.createElement("div");
+    div.className = "card destaque";
+    div.innerHTML = `
+      <h3>✔ VERIFICADO</h3>
+      <b>
+        ${p.nome}
+        ${p.verificado ? `<img src="verificado.png" style="width:16px;vertical-align:middle;margin-left:5px;">` : ""}
+      </b>
+      <p>Tipo: ${p.tipo}</p>
+      <p>Email: ${p.email}</p>
+      <p>Telefone: ${p.telefone}</p>
+      <p>Endereço: ${p.endereco}</p>
+      <p>${p.descricao}</p>
+      <button onclick="remover('${d.id}')">🗑 Remover</button>
+    `;
+    cardsContainer.appendChild(div);
+  });
+}
+
+window.aprovar = async (id)=>{
+  const snap = await getDocs(collection(db,"pedidos_destaque"));
+  let dados;
+
+  snap.forEach(d=>{
+    if(d.id === id){
+      dados = d.data();
+    }
+  });
+
+  await addDoc(collection(db,"servicos"),{
+    ...dados,
+    destaque:true,
+    verificado:true,
+    status:"ativo",
+    dataInicio:new Date().toISOString()
+  });
+
+  await deleteDoc(doc(db,"pedidos_destaque",id));
+  alert("Pedido aprovado com sucesso!");
+  carregarTudo();
+}
+
+window.rejeitar = async (id)=>{
+  if(confirm("Deseja rejeitar este pedido?")){
+    await deleteDoc(doc(db,"pedidos_destaque",id));
+    carregarTudo();
+  }
+}
+
+window.remover = async (id)=>{
+  if(confirm("Remover esta empresa verificada?")){
+    await deleteDoc(doc(db,"servicos",id));
+    carregarTudo();
+  }
+}
+</script>
+
+
+</body>
+</html>
