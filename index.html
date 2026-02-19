@@ -216,29 +216,63 @@ async function carregarTudo(){
     cardsContainer.appendChild(div);
   });
 
-  // ===== EMPRESAS JÁ VERIFICADAS =====
+  // ===== TÍTULO VERIFICADAS =====
+  const tituloVer = document.createElement("h2");
+  tituloVer.innerText = "✅ Empresas Verificadas";
+  tituloVer.style.width = "100%";
+  cardsContainer.appendChild(tituloVer);
+
+  // ===== EMPRESAS VERIFICADAS =====
   const servicosSnap = await getDocs(collection(db,"servicos"));
   servicosSnap.forEach(d=>{
     const p = d.data();
-    const div = document.createElement("div");
-    div.className = "card destaque";
-    div.innerHTML = `
-      <h3>✔ VERIFICADO</h3>
-      <b>
-        ${p.nome}
-        ${p.verificado ? `<img src="verificado.png" style="width:16px;vertical-align:middle;margin-left:5px;">` : ""}
-      </b>
-      <p>Tipo: ${p.tipo}</p>
-      <p>Email: ${p.email}</p>
-      <p>Telefone: ${p.telefone}</p>
-      <p>Endereço: ${p.endereco}</p>
-      <p>${p.descricao}</p>
-      <button onclick="remover('${d.id}')">🗑 Remover</button>
-    `;
-    cardsContainer.appendChild(div);
+
+    if(p.verificado === true){
+      const div = document.createElement("div");
+      div.className = "card destaque";
+      div.innerHTML = `
+        <h3>✔ VERIFICADO</h3>
+        <b>${p.nome}</b>
+        <p>Tipo: ${p.tipo}</p>
+        <p>Email: ${p.email}</p>
+        <p>Telefone: ${p.telefone}</p>
+        <p>Endereço: ${p.endereco}</p>
+        <p>${p.descricao}</p>
+        <button onclick="remover('${d.id}')">🗑 Remover</button>
+      `;
+      cardsContainer.appendChild(div);
+    }
+  });
+
+  // ===== TÍTULO NÃO VERIFICADAS =====
+  const tituloNao = document.createElement("h2");
+  tituloNao.innerText = "⚠️ Empresas NÃO Verificadas";
+  tituloNao.style.width = "100%";
+  cardsContainer.appendChild(tituloNao);
+
+  // ===== EMPRESAS NÃO VERIFICADAS =====
+  servicosSnap.forEach(d=>{
+    const p = d.data();
+
+    if(p.verificado !== true){
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <h3>⚠ NÃO VERIFICADO</h3>
+        <b>${p.nome}</b>
+        <p>Tipo: ${p.tipo}</p>
+        <p>Email: ${p.email}</p>
+        <p>Telefone: ${p.telefone}</p>
+        <p>Endereço: ${p.endereco}</p>
+        <p>${p.descricao}</p>
+        <button onclick="remover('${d.id}')">🗑 Remover</button>
+      `;
+      cardsContainer.appendChild(div);
+    }
   });
 }
 
+// ===== APROVAR =====
 window.aprovar = async (id)=>{
   const snap = await getDocs(collection(db,"pedidos_destaque"));
   let dados;
@@ -262,6 +296,7 @@ window.aprovar = async (id)=>{
   carregarTudo();
 }
 
+// ===== REJEITAR =====
 window.rejeitar = async (id)=>{
   if(confirm("Deseja rejeitar este pedido?")){
     await deleteDoc(doc(db,"pedidos_destaque",id));
@@ -269,8 +304,9 @@ window.rejeitar = async (id)=>{
   }
 }
 
+// ===== REMOVER =====
 window.remover = async (id)=>{
-  if(confirm("Remover esta empresa verificada?")){
+  if(confirm("Remover esta empresa?")){
     await deleteDoc(doc(db,"servicos",id));
     carregarTudo();
   }
@@ -280,3 +316,4 @@ window.remover = async (id)=>{
 
 </body>
 </html>
+
